@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	mongoDBTypeName = "mongodb"
+	mongoDBTypeName = "mongodb-extended-database-plugin"
 
 	defaultUserNameTemplate = `{{ printf "v-%s-%s-%s-%s" (.DisplayName | truncate 15) (.RoleName | truncate 15) (random 20) (unix_time) | replace "." "-" | truncate 100 }}`
 )
@@ -138,10 +138,17 @@ func (m *MongoDB) NewUser(ctx context.Context, req dbplugin.NewUserRequest) (dbp
 		return dbplugin.NewUserResponse{}, fmt.Errorf("roles array is required in creation statement")
 	}
 
+	// Create any custom roles required by the user's privileges before the user
+	// is created, so the roles exist when they are granted to the user.
+	if err := m.ensureRoles(ctx, mongoCS.DB, mongoCS.CustomRoles); err != nil {
+		return dbplugin.NewUserResponse{}, err
+	}
+
 	createUserCmd := createUserCommand{
-		Username: username,
-		Password: req.Password,
-		Roles:    mongoCS.Roles.toStandardRolesArray(),
+		Username:                   username,
+		Password:                   req.Password,
+		Roles:                      mongoCS.Roles.toStandardRolesArray(),
+		AuthenticationRestrictions: mongoCS.AuthenticationRestrictions,
 	}
 
 	if err := m.runCommandWithRetry(ctx, mongoCS.DB, createUserCmd); err != nil {
