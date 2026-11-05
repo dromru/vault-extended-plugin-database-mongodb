@@ -6,9 +6,10 @@ package mongodb
 import "go.mongodb.org/mongo-driver/mongo/writeconcern"
 
 type createUserCommand struct {
-	Username string        `bson:"createUser"`
-	Password string        `bson:"pwd,omitempty"`
-	Roles    []interface{} `bson:"roles"`
+	Username                   string                             `bson:"createUser"`
+	Password                   string                             `bson:"pwd,omitempty"`
+	Roles                      []interface{}                      `bson:"roles"`
+	AuthenticationRestrictions []*mongoAuthenticationRestrictions `bson:"authenticationRestrictions,omitempty"`
 }
 
 type updateUserCommand struct {
@@ -21,6 +22,32 @@ type dropUserCommand struct {
 	WriteConcern *writeconcern.WriteConcern `bson:"writeConcern"`
 }
 
+type mongoResource struct {
+	DB         string `json:"db" bson:"db"`
+	Collection string `json:"collection,omitempty" bson:"collection"`
+}
+
+type mongoPrivilege struct {
+	Resource mongoResource `json:"resource" bson:"resource"`
+	Actions  []string      `json:"actions" bson:"actions"`
+}
+
+type mongoCustomRole struct {
+	Role       string           `json:"role" bson:"role"`
+	Privileges []mongoPrivilege `json:"privileges" bson:"privileges"`
+}
+
+type mongoAuthenticationRestrictions struct {
+	ClientSource  []string `json:"clientSource,omitempty" bson:"clientSource,omitempty"`
+	ServerAddress []string `json:"serverAddress,omitempty" bson:"serverAddress,omitempty"`
+}
+
+type createRoleCommand struct {
+	Role       string           `bson:"createRole"`
+	Privileges []mongoPrivilege `bson:"privileges"`
+	Roles      []string         `bson:"roles"`
+}
+
 type mongodbRole struct {
 	Role string `json:"role" bson:"role"`
 	DB   string `json:"db"   bson:"db"`
@@ -29,8 +56,10 @@ type mongodbRole struct {
 type mongodbRoles []mongodbRole
 
 type mongoDBStatement struct {
-	DB    string       `json:"db"`
-	Roles mongodbRoles `json:"roles"`
+	DB                         string                             `json:"db"`
+	Roles                      mongodbRoles                       `json:"roles"`
+	CustomRoles                []mongoCustomRole                  `json:"custom_roles"`
+	AuthenticationRestrictions []*mongoAuthenticationRestrictions `json:"authentication_restrictions"`
 }
 
 // Convert array of role documents like:
